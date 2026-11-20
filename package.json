@@ -1,0 +1,21 @@
+{
+  "name": "dom-xray-3d",
+  "version": "1.0.0",
+  "description": "Web sitesi röntgeni: DOM yapısını ve ağ kaynaklarını gezilebilir 3D şehir + uzay ağına dönüştürür.",
+  "type": "module",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "setup": "npx playwright install chromium"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.22.3",
+    "playwright": "^1.65.1",
+    "three": "^0.187.0"
+  }
+}
