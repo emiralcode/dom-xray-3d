@@ -1,5 +1,5 @@
-// DOM şehri: her öğe bir InstancedMesh örneği (kutu). Düzen geçişleri, yükselme animasyonu,
-// vurgulama ve hızlı ışın–kutu (AABB) seçimi içerir.
+// DOM city: every element is one InstancedMesh instance (a box). Handles layout transitions,
+// the rise animation, highlighting and fast ray–box (AABB) picking.
 import * as THREE from 'three';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { createBoxMaterial } from './materials.js';
@@ -34,8 +34,8 @@ export class City {
     this.current = new Float32Array(this.layouts.city.boxes);
     this.from = new Float32Array(n * 6);
     this.target = this.layouts.city.boxes;
-    this.trans = 1; // geçiş ilerlemesi (1 = bitti)
-    this.rise = 0; // açılış animasyonu
+    this.trans = 1; // transition progress (1 = finished)
+    this.rise = 0; // intro animation
     this.seed = new Float32Array(n).map(() => Math.random());
 
     this.tint = new Float32Array(n * 3);
@@ -55,7 +55,7 @@ export class City {
     return this.bounds();
   }
 
-  /* ------------------------------ Düzen ------------------------------ */
+  /* ------------------------------ Layout ------------------------------ */
 
   setLayout(name) {
     if (!this.model || name === this.layoutName) return;
@@ -74,7 +74,7 @@ export class City {
     return { size: L.size, height: maxY, center: new THREE.Vector3(0, maxY * 0.3, 0) };
   }
 
-  /** Bir düğümün dünya koordinatlarındaki merkezi ve yarıçapı (hedef düzene göre). */
+  /** World-space center and radius of a node (in the target layout). */
   nodeBox(i) {
     const b = this.target;
     const o = i * 6;
@@ -129,7 +129,7 @@ export class City {
     this.mesh.instanceMatrix.needsUpdate = true;
   }
 
-  /* ---------------------------- Vurgulama ---------------------------- */
+  /* ---------------------------- Highlighting ---------------------------- */
 
   setState(patch) {
     const prevCats = this.state.hiddenCats;
@@ -165,9 +165,9 @@ export class City {
     this.geometry.attributes.aGlow.needsUpdate = true;
   }
 
-  /* ------------------------------ Seçim ------------------------------ */
+  /* ------------------------------ Picking ------------------------------ */
 
-  /** Işın ile en yakın görünür kutuyu bulur (slab yöntemi). */
+  /** Finds the nearest visible box hit by the ray (slab method). */
   pick(ray) {
     if (!this.mesh) return null;
     const b = this.current;
@@ -196,7 +196,7 @@ export class City {
     return best >= 0 ? { kind: 'node', idx: best, distance: bestT } : null;
   }
 
-  /* ----------------------------- Etiketler ----------------------------- */
+  /* ------------------------------- Labels ------------------------------- */
 
   #buildLabels() {
     const { nodes, desc, children } = this.model;
@@ -209,7 +209,7 @@ export class City {
     candidates.sort((a, b) => desc[b] - desc[a]);
     const chosen = [];
     for (const i of candidates) {
-      // Tek çocuklu sarmalayıcı zincirlerini atla: ebeveyni zaten seçiliyse ve neredeyse aynı büyüklükteyse.
+      // Skip single-child wrapper chains: parent already chosen and nearly the same size.
       const p = nodes[i].p;
       if (chosen.includes(p) && desc[i] > desc[p] * 0.75) continue;
       if (children[i].length === 1 && desc[children[i][0]] > desc[i] * 0.9 && !nodes[i].i) continue;

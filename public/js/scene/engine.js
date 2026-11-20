@@ -1,4 +1,4 @@
-// Three.js sahne motoru: renderer, kamera, kontroller, bloom, etiketler, yıldızlar, zemin, kamera uçuşu.
+// Three.js scene engine: renderer, camera, controls, bloom, labels, stars, ground, camera flights.
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
@@ -44,7 +44,7 @@ export class Engine {
     controls.screenSpacePanning = true;
     controls.addEventListener('start', () => this.cancelFlight());
 
-    // Işıklar
+    // Lights
     scene.add(new THREE.HemisphereLight(0x8fb4ff, 0x0a0d18, 0.6));
     const key = new THREE.DirectionalLight(0xffffff, 1.1);
     key.position.set(0.6, 1, 0.35);
@@ -53,7 +53,7 @@ export class Engine {
     rim.position.set(-0.7, 0.4, -0.8);
     scene.add(rim);
 
-    // Zemin
+    // Ground
     this.groundMat = createGroundMaterial();
     const ground = new THREE.Mesh(new THREE.PlaneGeometry(6000, 6000), this.groundMat);
     ground.rotation.x = -Math.PI / 2;
@@ -123,7 +123,7 @@ export class Engine {
     this.scene.fog.density = 0.55 / Math.max(size * 2.6, 100);
   }
 
-  /** Kamerayı yumuşakça hedefe uçurur. */
+  /** Smoothly flies the camera to a target. */
   flyTo(target, position, duration = 1.1) {
     this.flight = {
       t: 0,
@@ -135,7 +135,7 @@ export class Engine {
     };
   }
 
-  /** Bir noktaya, verilen yarıçaptaki nesneyi kadraja alacak şekilde odaklanır. */
+  /** Focuses on a point so that an object of the given radius fills the frame. */
   focus(center, radius, duration) {
     const dir = this.camera.position.clone().sub(this.controls.target).normalize();
     if (dir.y < 0.25) dir.y = 0.45;
@@ -148,7 +148,7 @@ export class Engine {
     this.flight = null;
   }
 
-  /** Röntgen tarama halkasını başlatır. */
+  /** Starts the X-ray scan ring. */
   pulseScan(maxRadius, duration = 2.4, intensity = 1) {
     this.scan = { t: 0, maxRadius, duration, intensity };
   }

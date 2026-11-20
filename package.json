@@ -1,7 +1,7 @@
 {
   "name": "dom-xray-3d",
   "version": "1.0.0",
-  "description": "Web sitesi röntgeni: DOM yapısını ve ağ kaynaklarını gezilebilir 3D şehir + uzay ağına dönüştürür.",
+  "description": "Website X-ray: turns a site's DOM structure and network resources into an explorable 3D city and space network.",
   "type": "module",
   "main": "server/index.js",
   "scripts": {

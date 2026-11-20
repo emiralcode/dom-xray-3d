@@ -43,7 +43,7 @@ a { color: #8fb6ff; }
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
-/* ------------------------------ Üst çubuk ------------------------------ */
+/* ------------------------------ Top bar ------------------------------ */
 #topbar {
   position: fixed; top: 12px; left: 16px; right: 16px; height: var(--top-h);
   display: flex; align-items: center; gap: 18px; padding: 0 10px 0 16px;
@@ -109,7 +109,7 @@ a { color: #8fb6ff; }
 .hero-features b { display: block; font-size: 13px; margin-bottom: 4px; }
 .hero-features span { color: var(--muted); font-size: 12.5px; }
 
-/* ------------------------------- Paneller ------------------------------- */
+/* ------------------------------- Panels ------------------------------- */
 .panel { position: fixed; border-radius: var(--radius); z-index: 10; display: flex; flex-direction: column; }
 .panel-scroll { overflow-y: auto; overscroll-behavior: contain; padding: 16px; scrollbar-width: thin; scrollbar-color: rgba(130, 160, 255, 0.25) transparent; }
 .panel-scroll::-webkit-scrollbar { width: 6px; }
@@ -137,7 +137,7 @@ h4 { margin: 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.09
 .chip small { color: var(--dim); font-family: var(--mono); font-size: 10.5px; }
 .chip.off { opacity: 0.35; text-decoration: line-through; }
 
-/* -------------------------------- Rapor -------------------------------- */
+/* -------------------------------- Report -------------------------------- */
 .r-site { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 14px; }
 .monogram { width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0; display: grid; place-items: center; font-weight: 800; font-size: 17px; background: linear-gradient(135deg, rgba(76, 141, 255, 0.35), rgba(255, 95, 210, 0.25)); border: 1px solid var(--line-strong); }
 .lightbox { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(4px); cursor: zoom-out; animation: fade 0.2s both; padding: 24px; }
@@ -200,7 +200,7 @@ h4 { margin: 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.09
 .shot { width: 100%; border-radius: 10px; border: 1px solid var(--line); display: block; cursor: zoom-in; }
 .note { font-size: 12px; padding: 8px 10px; border-radius: 8px; background: rgba(255, 179, 64, 0.08); border: 1px solid rgba(255, 179, 64, 0.2); color: #ffd699; margin-top: 10px; }
 
-/* ------------------------------- Denetçi ------------------------------- */
+/* ------------------------------- Inspector ------------------------------- */
 .ins-head { display: flex; gap: 10px; align-items: flex-start; padding-right: 30px; margin-bottom: 12px; }
 .badge { font: 700 10px var(--mono); padding: 3px 7px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.06em; flex-shrink: 0; margin-top: 2px; }
 .ins-head h3 { margin: 0; font: 600 14px var(--mono); word-break: break-all; line-height: 1.35; }
@@ -222,7 +222,7 @@ h4 { margin: 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.09
 .pill.first { background: rgba(54, 226, 192, 0.14); color: #7cf0d8; }
 .pill.fail { background: rgba(255, 77, 94, 0.15); color: #ff8a96; }
 
-/* ------------------------------- Alt panel ------------------------------- */
+/* ------------------------------- Bottom dock ------------------------------- */
 #dock { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); width: min(880px, calc(100vw - 32px - 2 * 360px - 24px)); min-width: 560px; border-radius: 14px; z-index: 11; padding: 8px 10px 10px; animation: slideU 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 .timeline { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
 .timeline-track { position: relative; flex: 1; height: 30px; }
@@ -245,7 +245,7 @@ h4 { margin: 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.09
 .tgl.on { color: #dce6ff; border-color: rgba(76, 141, 255, 0.4); background: rgba(76, 141, 255, 0.12); }
 .actions { display: flex; gap: 4px; }
 
-/* -------------------------------- Etiketler -------------------------------- */
+/* -------------------------------- Labels -------------------------------- */
 .lbl { pointer-events: auto; cursor: pointer; font: 600 11px var(--mono); color: #e6ecff; padding: 3px 8px; border-radius: 6px; background: rgba(5, 9, 20, 0.72); border: 1px solid rgba(130, 160, 255, 0.25); white-space: nowrap; display: flex; align-items: center; gap: 6px; transform: translateY(-50%); backdrop-filter: blur(4px); transition: border-color 0.15s, background 0.15s; user-select: none; }
 .lbl:hover { border-color: rgba(130, 180, 255, 0.7); background: rgba(20, 30, 60, 0.9); }
 .lbl small { color: var(--muted); font-weight: 500; }
@@ -298,7 +298,7 @@ dialog#help p { color: #b9c3e0; font-size: 13px; margin: 0; }
 kbd { font: 600 11px var(--mono); padding: 2px 6px; border-radius: 5px; border: 1px solid var(--line-strong); background: rgba(255, 255, 255, 0.05); color: #fff; }
 dialog#help form { margin-top: 18px; text-align: right; }
 
-/* -------------------------------- Animasyon -------------------------------- */
+/* -------------------------------- Animation -------------------------------- */
 @keyframes rise { from { opacity: 0; transform: translateY(18px); } }
 @keyframes slideL { from { opacity: 0; transform: translateX(-24px); } }
 @keyframes slideR { from { opacity: 0; transform: translateX(24px); } }
@@ -308,7 +308,7 @@ dialog#help form { margin-top: 18px; text-align: right; }
 @keyframes beam { 0% { left: -40%; } 100% { left: 100%; } }
 @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(54, 226, 192, 0.6); } 70% { box-shadow: 0 0 0 9px rgba(54, 226, 192, 0); } 100% { box-shadow: 0 0 0 0 rgba(54, 226, 192, 0); } }
 
-/* -------------------------------- Duyarlılık -------------------------------- */
+/* -------------------------------- Responsive -------------------------------- */
 @media (max-width: 1400px) {
   #dock { left: calc(16px + 340px + 12px); right: calc(16px + 360px + 12px); width: auto; min-width: 0; transform: none; animation-name: fade; }
   .toggles .tgl[data-tgl="bloom"], .toggles .tgl[data-tgl="rotate"] { display: none; }

@@ -1,5 +1,5 @@
-// SSRF koruması: analiz edilecek URL'nin (ve sayfanın yaptığı isteklerin)
-// iç ağ / localhost / bulut metadata adreslerine gitmesini engeller.
+// SSRF protection: prevents the target URL (and every request the page makes)
+// from reaching private networks, localhost or cloud metadata endpoints.
 import dns from 'node:dns/promises';
 import net from 'node:net';
 
@@ -61,23 +61,23 @@ export async function isHostAllowed(hostname) {
 
 export class UrlError extends Error {}
 
-/** Kullanıcı girdisini normalize eder ve güvenlik kontrolünden geçirir. */
+/** Normalizes user input and runs it through the security checks. */
 export async function validateTargetUrl(input) {
   let raw = String(input || '').trim();
-  if (!raw) throw new UrlError('URL boş olamaz.');
-  if (raw.length > 2048) throw new UrlError('URL çok uzun.');
+  if (!raw) throw new UrlError('URL cannot be empty.');
+  if (raw.length > 2048) throw new UrlError('URL is too long.');
   if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(raw)) raw = `https://${raw}`;
 
   let url;
   try {
     url = new URL(raw);
   } catch {
-    throw new UrlError('Geçersiz URL.');
+    throw new UrlError('Invalid URL.');
   }
-  if (!['http:', 'https:'].includes(url.protocol)) throw new UrlError('Sadece http/https desteklenir.');
-  if (url.username || url.password) throw new UrlError('Kimlik bilgisi içeren URL kabul edilmez.');
+  if (!['http:', 'https:'].includes(url.protocol)) throw new UrlError('Only http/https is supported.');
+  if (url.username || url.password) throw new UrlError('URLs containing credentials are not accepted.');
   if (!(await isHostAllowed(url.hostname))) {
-    throw new UrlError('Bu adrese erişime izin verilmiyor (iç ağ / çözümlenemeyen alan adı).');
+    throw new UrlError('Access to this address is not allowed (private network or unresolvable domain).');
   }
   url.hash = '';
   return url.toString();

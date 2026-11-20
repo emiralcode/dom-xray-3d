@@ -1,19 +1,19 @@
-// Sunucudan gelen ham analiz sonucunu görselleştirmeye hazır modele dönüştürür.
+// Turns the raw analysis result from the server into a model ready for visualization.
 import { clamp, tagCategory } from './util.js';
 
 export function buildModel(result) {
   const nodes = result.dom.nodes;
   const n = nodes.length;
   const children = Array.from({ length: n }, () => []);
-  const desc = new Uint32Array(n); // alt ağaçtaki öğe sayısı (kendisi hariç)
-  const height = new Uint16Array(n); // alt ağacın derinliği
+  const desc = new Uint32Array(n); // number of elements in the subtree (excluding itself)
+  const height = new Uint16Array(n); // depth of the subtree
 
   for (let i = 0; i < n; i++) {
     const node = nodes[i];
     node.cat = tagCategory(node.t);
     if (node.p >= 0) children[node.p].push(i);
   }
-  // DFS sırasında ebeveyn her zaman çocuktan önce gelir → tersten toplayabiliriz.
+  // In DFS order a parent always precedes its children → we can accumulate in reverse.
   for (let i = n - 1; i > 0; i--) {
     const p = nodes[i].p;
     if (p >= 0) {
@@ -22,7 +22,7 @@ export function buildModel(result) {
     }
   }
 
-  // Etiket dağılımı
+  // Tag distribution
   const tagCounts = new Map();
   const catCounts = {};
   for (const node of nodes) {
@@ -31,11 +31,11 @@ export function buildModel(result) {
   }
   const topTags = [...tagCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
 
-  // En derin yol
+  // Deepest path
   let deepest = 0;
   for (let i = 0; i < n; i++) if (nodes[i].d > nodes[deepest].d) deepest = i;
 
-  // Ağ kaynakları
+  // Network resources
   const resources = result.resources.map((r, i) => ({ ...r, idx: i, bytes: r.transfer || r.size || 0 }));
   const byType = {};
   const sites = new Map();
@@ -86,23 +86,23 @@ export function buildModel(result) {
   return model;
 }
 
-/* --------------------------------- Skor --------------------------------- */
+/* --------------------------------- Score --------------------------------- */
 
 const METRICS = [
-  { key: 'dom', label: 'DOM öğe sayısı', good: 800, bad: 3000, weight: 18, fmt: 'num',
-    hint: 'Lighthouse 800 altını iyi, 1400 üstünü fazla kabul eder.' },
-  { key: 'depth', label: 'Maks. iç içe derinlik', good: 14, bad: 32, weight: 10, fmt: 'num',
-    hint: 'Derin iç içe yapı stil hesaplamasını ve yerleşimi yavaşlatır.' },
-  { key: 'bytes', label: 'Toplam transfer', good: 1.0e6, bad: 6e6, weight: 20, fmt: 'bytes',
-    hint: 'Sayfanın ağ üzerinden indirdiği toplam veri.' },
+  { key: 'dom', label: 'DOM element count', good: 800, bad: 3000, weight: 18, fmt: 'num',
+    hint: 'Lighthouse considers under 800 good and over 1,400 excessive.' },
+  { key: 'depth', label: 'Max nesting depth', good: 14, bad: 32, weight: 10, fmt: 'num',
+    hint: 'Deep nesting slows down style calculation and layout.' },
+  { key: 'bytes', label: 'Total transfer', good: 1.0e6, bad: 6e6, weight: 20, fmt: 'bytes',
+    hint: 'Total data the page downloads over the network.' },
   { key: 'js', label: 'JavaScript', good: 300e3, bad: 1.6e6, weight: 22, fmt: 'bytes',
-    hint: 'İndirilen, ayrıştırılan ve çalıştırılan script yükü.' },
-  { key: 'requests', label: 'İstek sayısı', good: 50, bad: 200, weight: 14, fmt: 'num',
-    hint: 'Her istek bağlantı ve öncelik yükü getirir.' },
-  { key: 'third', label: '3. parti istek oranı', good: 0.2, bad: 0.7, weight: 10, fmt: 'pct',
-    hint: 'Reklam, analitik ve CDN dışı alan adlarına giden istekler.' },
-  { key: 'divs', label: '"div çorbası" oranı', good: 0.35, bad: 0.7, weight: 6, fmt: 'pct',
-    hint: 'Anlamsal etiketler yerine div kullanım oranı.' },
+    hint: 'Script payload that has to be downloaded, parsed and executed.' },
+  { key: 'requests', label: 'Request count', good: 50, bad: 200, weight: 14, fmt: 'num',
+    hint: 'Every request adds connection and prioritization overhead.' },
+  { key: 'third', label: 'Third-party request share', good: 0.2, bad: 0.7, weight: 10, fmt: 'pct',
+    hint: 'Requests to ad, analytics and other external domains.' },
+  { key: 'divs', label: '"Div soup" ratio', good: 0.35, bad: 0.7, weight: 6, fmt: 'pct',
+    hint: 'Share of divs used instead of semantic elements.' },
 ];
 
 function computeScore(m) {
@@ -127,16 +127,16 @@ function computeScore(m) {
   const score = Math.round((total / weights) * 100);
   const grade = score >= 90 ? 'A' : score >= 75 ? 'B' : score >= 60 ? 'C' : score >= 45 ? 'D' : score >= 30 ? 'E' : 'F';
   const verdict =
-    score >= 85 ? 'Tertemiz — hafif ve düzenli bir yapı.'
-    : score >= 65 ? 'Fena değil — birkaç şişkin bölge var.'
-    : score >= 45 ? 'Şişkin — ciddi optimizasyon fırsatları var.'
-    : 'Obez — DOM ve ağ yükü çok ağır.';
+    score >= 85 ? 'Spotless — a lean, well-organized structure.'
+    : score >= 65 ? 'Not bad — a few bloated areas.'
+    : score >= 45 ? 'Bloated — serious optimization opportunities.'
+    : 'Obese — very heavy DOM and network load.';
   return { score, grade, verdict, items };
 }
 
-/* ----------------------------- Seçici eşleştirme ----------------------------- */
+/* ----------------------------- Selector matching ----------------------------- */
 
-/** "div", ".card", "#app", "a.btn.primary", "img, video" gibi basit seçicileri derler. */
+/** Compiles simple selectors such as "div", ".card", "#app", "a.btn.primary", "img, video". */
 export function compileSelector(input) {
   const groups = String(input).split(',').map((s) => s.trim()).filter(Boolean).map((s) => {
     const tag = s.match(/^[a-z][a-z0-9-]*/i)?.[0]?.toLowerCase() || null;

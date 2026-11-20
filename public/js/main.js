@@ -1,4 +1,4 @@
-// Uygulama denetleyicisi: analiz akışı, seçim, arama, filtreler, zaman çizelgesi, kısayollar.
+// App controller: analysis flow, selection, search, filters, timeline, shortcuts.
 import * as THREE from 'three';
 import { Engine } from './scene/engine.js';
 import { City } from './scene/city.js';
@@ -31,7 +31,7 @@ const app = {
 city.onLabelClick = (i) => !app.demo && select({ kind: 'node', idx: i }, true);
 network.onLabelClick = (i) => !app.demo && select({ kind: 'site', idx: i }, true);
 
-/* ------------------------------- Sahne yükle ------------------------------- */
+/* ------------------------------- Load scene ------------------------------- */
 
 function loadModel(model, { demo = false } = {}) {
   app.model = model;
@@ -63,24 +63,24 @@ function resetCamera(animate = true) {
   }
 }
 
-// Karşılama arka planı
+// Landing background
 loadModel(buildModel(demoResult()), { demo: true });
 engine.controls.autoRotate = true;
 
-/* --------------------------------- Analiz --------------------------------- */
+/* -------------------------------- Analysis -------------------------------- */
 
 const STEP_PCT = { queue: 4, launch: 10, navigate: 22, load: 40, settle: 55, scroll: 68, dom: 80, screenshot: 88, network: 94, done: 100, cache: 100 };
 let loaderTimer = null;
 
 function startAnalysis(input) {
   const url = String(input || '').trim();
-  if (!url) { toast('Lütfen bir URL girin.'); $('#url-input').focus(); return; }
+  if (!url) { toast('Please enter a URL.'); $('#url-input').focus(); return; }
   stopAnalysis();
   const fresh = $('#fresh').checked;
   $('#url-input').value = url;
   $('#loader').hidden = false;
   $('#hero').hidden = true;
-  $('#loader-title').textContent = 'Röntgen çekiliyor…';
+  $('#loader-title').textContent = 'Taking the X-ray…';
   $('#loader-url').textContent = url;
   $('#loader-steps').innerHTML = '';
   $('#loader-progress').style.width = '2%';
@@ -106,7 +106,7 @@ function startAnalysis(input) {
       onResult(JSON.parse(e.data));
     } catch (err) {
       console.error(err);
-      toast('Sonuç işlenemedi: ' + err.message);
+      toast('Could not process the result: ' + err.message);
     }
   });
   es.addEventListener('failure', (e) => {
@@ -116,14 +116,14 @@ function startAnalysis(input) {
     li.textContent = message;
     $('#loader-steps').appendChild(li);
     stopAnalysis(false);
-    $('#loader-title').textContent = 'Analiz başarısız';
+    $('#loader-title').textContent = 'Analysis failed';
     setTimeout(() => { $('#loader').hidden = true; if (app.demo) $('#hero').hidden = false; }, 2200);
     toast(message);
   });
   es.onerror = () => {
     if (app.es !== es) return;
     stopAnalysis();
-    toast('Sunucu bağlantısı koptu.');
+    toast('Lost connection to the server.');
   };
 }
 
@@ -160,15 +160,15 @@ function onResult(data) {
   buildTimeline(model);
   setLayout('city');
   let host = data.finalUrl;
-  try { host = new URL(data.finalUrl).host; } catch { /* yok */ }
+  try { host = new URL(data.finalUrl).host; } catch { /* none */ }
   document.title = `${host} — DOM X-Ray 3D`;
   const u = new URL(location.href);
   u.searchParams.set('url', data.url);
   history.replaceState(null, '', u);
-  if (data.dom.truncated) toast(`Büyük DOM: ilk ${fmtNum(data.dom.nodes.length)} öğe gösteriliyor.`, 'info');
+  if (data.dom.truncated) toast(`Large DOM: showing the first ${fmtNum(data.dom.nodes.length)} elements.`, 'info');
 }
 
-/* ---------------------------------- Seçim ---------------------------------- */
+/* -------------------------------- Selection -------------------------------- */
 
 const raycaster = new THREE.Raycaster();
 const ndc = new THREE.Vector2();
@@ -231,7 +231,7 @@ function tooltipHtml(hit) {
   if (hit.kind === 'node') {
     const n = m.nodes[hit.idx];
     return `<div class="tt-title"><i style="background:${DOM_CATEGORIES[n.cat].color}"></i>${esc(nodeLabel(n, true))}</div>
-      <div class="tt-sub">${fmtNum(m.desc[hit.idx])} alt öğe · derinlik ${n.d} · ${n.r[2]}×${n.r[3]}px${n.h ? ' · gizli' : ''}</div>`;
+      <div class="tt-sub">${fmtNum(m.desc[hit.idx])} descendants · depth ${n.d} · ${n.r[2]}×${n.r[3]}px${n.h ? ' · hidden' : ''}</div>`;
   }
   if (hit.kind === 'resource') {
     const r = m.resources[hit.idx];
@@ -240,7 +240,7 @@ function tooltipHtml(hit) {
   }
   const s = m.sites[hit.idx];
   return `<div class="tt-title"><i style="background:${s.thirdParty ? '#ffb340' : '#8fb8ff'}"></i>${esc(s.name)}</div>
-    <div class="tt-sub">${s.thirdParty ? '3. parti' : 'Ana site'} · ${s.resources.length} istek · ${fmtBytes(s.bytes)}</div>`;
+    <div class="tt-sub">${s.thirdParty ? '3rd party' : 'Main site'} · ${s.resources.length} requests · ${fmtBytes(s.bytes)}</div>`;
 }
 
 function positionTooltip() {
@@ -306,7 +306,7 @@ function focusSelection() {
   }
 }
 
-/* --------------------------------- Arama --------------------------------- */
+/* --------------------------------- Search --------------------------------- */
 
 let searchTimer = null;
 function applySearch() {
@@ -320,7 +320,7 @@ function applySearch() {
   let count = 0;
   m.nodes.forEach((n, i) => { if (fn(n)) { match[i] = 1; count++; } });
   city.setState({ match });
-  $('#search-count').textContent = `${fmtNum(count)} eşleşme`;
+  $('#search-count').textContent = `${fmtNum(count)} ${count === 1 ? 'match' : 'matches'}`;
   return { match, count };
 }
 
@@ -329,7 +329,7 @@ function highlightSubtree(idx) {
   const match = new Uint8Array(m.nodes.length);
   for (let i = idx; i <= idx + m.desc[idx]; i++) match[i] = 1;
   $('#search').value = '';
-  $('#search-count').textContent = `alt ağaç: ${fmtNum(m.desc[idx] + 1)}`;
+  $('#search-count').textContent = `subtree: ${fmtNum(m.desc[idx] + 1)}`;
   city.setState({ match });
 }
 
@@ -347,7 +347,7 @@ $('#search').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') {
     const res = applySearch();
     if (res?.count) {
-      // En büyük eşleşmeyi seç
+      // Select the largest match
       let best = -1;
       res.match.forEach((v, i) => { if (v && (best < 0 || app.model.desc[i] > app.model.desc[best])) best = i; });
       select({ kind: 'node', idx: best }, true);
@@ -356,7 +356,7 @@ $('#search').addEventListener('keydown', (e) => {
   if (e.key === 'Escape') { clearSearch(); e.target.blur(); }
 });
 
-/* --------------------------------- Lejant --------------------------------- */
+/* --------------------------------- Legend --------------------------------- */
 
 function buildLegend(model) {
   const dom = $('#legend-dom');
@@ -384,7 +384,7 @@ function buildLegend(model) {
   }));
 }
 
-/* ----------------------------- Zaman çizelgesi ----------------------------- */
+/* -------------------------------- Timeline -------------------------------- */
 
 let tlMax = 1000;
 let replay = null;
@@ -392,7 +392,7 @@ let replay = null;
 function buildTimeline(model) {
   tlMax = Math.max(1000, ...model.resources.map((r) => r.start + (r.duration || 0)));
   $('#timeline').value = 1000;
-  $('#timeline-label').textContent = 'tümü';
+  $('#timeline-label').textContent = 'all';
   network.setReplay(null);
   requestAnimationFrame(() => drawWaterfall(model));
 }
@@ -414,7 +414,7 @@ function drawWaterfall(model) {
     ctx.globalAlpha = 0.85;
     ctx.fillRect(x, 2 + i * rowH, w, Math.max(rowH - 0.2, 0.8));
   });
-  // DCL / load işaretleri
+  // DCL / load markers
   const p = model.raw.perf || {};
   ctx.globalAlpha = 0.7;
   for (const [v, c] of [[p.domContentLoaded, '#36e2c0'], [p.load, '#ff5fd2']]) {
@@ -428,7 +428,7 @@ function setTimelineValue(v) {
   $('#timeline').value = v;
   if (v >= 1000) {
     network.setReplay(null);
-    $('#timeline-label').textContent = 'tümü';
+    $('#timeline-label').textContent = 'all';
   } else {
     const t = (v / 1000) * tlMax;
     network.setReplay(t);
@@ -458,7 +458,7 @@ engine.onFrame((dt) => {
 $('#replay-btn').addEventListener('click', toggleReplay);
 window.addEventListener('resize', () => app.model && !app.demo && drawWaterfall(app.model));
 
-/* ------------------------------ Düzen & ayarlar ------------------------------ */
+/* ---------------------------- Layout & settings ---------------------------- */
 
 function setLayout(name) {
   city.setLayout(name);
@@ -490,18 +490,18 @@ $('[data-toggle="report"]').addEventListener('click', () => {
   setTimeout(() => app.model && !app.demo && drawWaterfall(app.model), 400);
 });
 $('#help-btn').addEventListener('click', () => $('#help').showModal());
-$('#cancel-btn').addEventListener('click', () => { stopAnalysis(); toast('Analiz iptal edildi.', 'info'); });
+$('#cancel-btn').addEventListener('click', () => { stopAnalysis(); toast('Analysis cancelled.', 'info'); });
 
 $('#url-form').addEventListener('submit', (e) => { e.preventDefault(); startAnalysis($('#url-input').value); });
 $$('.examples [data-url]').forEach((b) => b.addEventListener('click', () => startAnalysis(b.dataset.url)));
 
-/* ------------------------------ Dışa / içe aktar ------------------------------ */
+/* ----------------------------- Export / import ----------------------------- */
 
 $('#export-btn').addEventListener('click', () => {
   if (!app.model || app.demo) return;
   const raw = app.model.raw;
   let host = 'site';
-  try { host = new URL(raw.finalUrl).host; } catch { /* yok */ }
+  try { host = new URL(raw.finalUrl).host; } catch { /* none */ }
   const blob = new Blob([JSON.stringify(raw)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -517,15 +517,15 @@ window.addEventListener('drop', async (e) => {
   if (!file) return;
   try {
     const data = JSON.parse(await file.text());
-    if (!data?.dom?.nodes || !Array.isArray(data.resources)) throw new Error('Geçersiz biçim');
+    if (!data?.dom?.nodes || !Array.isArray(data.resources)) throw new Error('Invalid format');
     onResult(data);
-    toast(`${file.name} içe aktarıldı.`, 'info');
+    toast(`Imported ${file.name}.`, 'info');
   } catch (err) {
-    toast(`Dosya okunamadı: ${err.message}`);
+    toast(`Could not read the file: ${err.message}`);
   }
 });
 
-/* -------------------------------- Kısayollar -------------------------------- */
+/* -------------------------------- Shortcuts -------------------------------- */
 
 window.addEventListener('keydown', (e) => {
   const typing = /INPUT|TEXTAREA/.test(document.activeElement?.tagName);
@@ -561,11 +561,11 @@ function toast(msg, kind = 'error') {
   toastTimer = setTimeout(() => (t.className = ''), 4200);
 }
 
-/* ---------------------------------- Başlat ---------------------------------- */
+/* ---------------------------------- Start ---------------------------------- */
 
 const initial = new URLSearchParams(location.search).get('url');
 if (initial) startAnalysis(initial);
 else $('#url-input').focus();
 
-// Hata ayıklama için
+// Debug hook
 window.__xray = { app, engine, city, network };

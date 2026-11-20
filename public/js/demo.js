@@ -1,4 +1,4 @@
-// Karşılama ekranının arka planı için sentetik (gerçek olmayan) bir site üretir.
+// Generates a synthetic (not real) site for the landing screen background.
 export function demoResult() {
   let seed = 7;
   const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);

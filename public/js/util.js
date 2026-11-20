@@ -1,25 +1,25 @@
-// Biçimlendirme, renk paleti ve küçük yardımcılar.
+// Formatting, color palettes and small helpers.
 
 export const DOM_CATEGORIES = {
-  layout: { label: 'Yerleşim (div, section…)', color: '#4c8dff' },
-  text: { label: 'Metin (p, span, a, h1…)', color: '#36e2c0' },
-  media: { label: 'Medya (img, svg, video)', color: '#ff5fd2' },
-  interactive: { label: 'Etkileşim (button, input)', color: '#ffb340' },
-  script: { label: 'Script / stil / meta', color: '#ff4d5e' },
-  embed: { label: 'Gömülü (iframe, embed)', color: '#ffe14d' },
-  custom: { label: 'Web bileşeni (custom-el)', color: '#a78bff' },
+  layout: { label: 'Layout (div, section…)', color: '#4c8dff' },
+  text: { label: 'Text (p, span, a, h1…)', color: '#36e2c0' },
+  media: { label: 'Media (img, svg, video)', color: '#ff5fd2' },
+  interactive: { label: 'Interactive (button, input)', color: '#ffb340' },
+  script: { label: 'Script / style / meta', color: '#ff4d5e' },
+  embed: { label: 'Embedded (iframe, embed)', color: '#ffe14d' },
+  custom: { label: 'Web component (custom-el)', color: '#a78bff' },
 };
 
 export const RES_TYPES = {
-  document: { label: 'Doküman', color: '#e9f1ff' },
+  document: { label: 'Document', color: '#e9f1ff' },
   script: { label: 'Script', color: '#ff4d5e' },
   stylesheet: { label: 'CSS', color: '#4c8dff' },
-  image: { label: 'Görsel', color: '#ff5fd2' },
+  image: { label: 'Image', color: '#ff5fd2' },
   font: { label: 'Font', color: '#a78bff' },
   xhr: { label: 'API / XHR', color: '#36e2c0' },
-  media: { label: 'Medya', color: '#ffb340' },
+  media: { label: 'Media', color: '#ffb340' },
   websocket: { label: 'WebSocket', color: '#7cff6b' },
-  other: { label: 'Diğer', color: '#8a94a6' },
+  other: { label: 'Other', color: '#8a94a6' },
 };
 
 const LAYOUT = new Set('div section article main header footer nav aside ul ol li dl dt dd table thead tbody tfoot tr td th caption colgroup col figure figcaption details summary fieldset legend address hgroup search menu center body html dialog'.split(' '));
@@ -53,7 +53,7 @@ export function fmtMs(ms) {
   return `${(ms / 1000).toFixed(2)} s`;
 }
 
-export const fmtNum = (n) => (n == null ? '—' : n.toLocaleString('tr-TR'));
+export const fmtNum = (n) => (n == null ? '—' : n.toLocaleString('en-US'));
 export const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 export const lerp = (a, b, t) => a + (b - a) * t;
 export const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);

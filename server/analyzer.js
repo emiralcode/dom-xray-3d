@@ -1,4 +1,4 @@
-// Headless Chromium (Playwright + CDP) ile bir sayfanın DOM yapısını ve ağ trafiğini çıkarır.
+// Extracts a page's DOM structure and network traffic with headless Chromium (Playwright + CDP).
 import { chromium } from 'playwright';
 import { ALLOW_PRIVATE, isHostAllowed } from './security.js';
 
@@ -9,7 +9,7 @@ const VIEWPORT = { width: 1440, height: 900 };
 const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 
-/* ----------------------------- Tarayıcı havuzu ----------------------------- */
+/* ----------------------------- Browser pool ----------------------------- */
 
 let browserPromise = null;
 
@@ -24,7 +24,7 @@ async function launchBrowser() {
       lastErr = err;
     }
   }
-  throw new Error(`Chromium başlatılamadı. "npm run setup" komutunu çalıştırın.\n${lastErr?.message || ''}`);
+  throw new Error(`Could not launch Chromium. Run "npm run setup".\n${lastErr?.message || ''}`);
 }
 
 export function getBrowser() {
@@ -42,10 +42,10 @@ export async function closeBrowser() {
   if (!browserPromise) return;
   try {
     (await browserPromise).close();
-  } catch { /* yok say */ }
+  } catch { /* ignore */ }
 }
 
-// Basit semafor: aynı anda en fazla MAX_CONCURRENT analiz.
+// Simple semaphore: at most MAX_CONCURRENT analyses at once.
 let running = 0;
 const waiters = [];
 async function acquire(onQueued) {
@@ -59,7 +59,7 @@ function release() {
   waiters.shift()?.();
 }
 
-/* ------------------------------ Yardımcılar ------------------------------ */
+/* -------------------------------- Helpers -------------------------------- */
 
 const TYPE_MAP = {
   Document: 'document', Script: 'script', Stylesheet: 'stylesheet', Image: 'image',
@@ -92,8 +92,8 @@ function initiatorUrl(init) {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const withTimeout = (p, ms) => Promise.race([p, sleep(ms)]);
 
-/* -------------------------- Sayfa içi DOM çıkarıcı -------------------------- */
-// Bu fonksiyon tarayıcı içinde çalışır (page.evaluate).
+/* ---------------------------- In-page DOM extractor ---------------------------- */
+// This function runs inside the browser (page.evaluate).
 function extractDom(maxNodes) {
   const nodes = [];
   const sx = window.scrollX;
@@ -160,7 +160,7 @@ function extractDom(maxNodes) {
   if (document.querySelector('meta[name="generator"][content*="WordPress" i]') || document.querySelector('link[href*="wp-content"]')) tech.push('WordPress');
   if (w.Shopify) tech.push('Shopify');
   if (w.gtag || w.dataLayer) tech.push('Google Tag');
-  if (document.querySelector('[class*="tw-"], [class~="flex"][class*="px-"]')) tech.push('Tailwind (olası)');
+  if (document.querySelector('[class*="tw-"], [class~="flex"][class*="px-"]')) tech.push('Tailwind (likely)');
 
   return {
     nodes,
@@ -214,25 +214,25 @@ async function autoScroll(page) {
   });
 }
 
-/* --------------------------------- Analiz --------------------------------- */
+/* -------------------------------- Analysis -------------------------------- */
 
 /**
- * @param {string} url  doğrulanmış hedef URL
+ * @param {string} url  validated target URL
  * @param {(step: string, msg: string) => void} progress
  * @param {AbortSignal} signal
  */
 export async function analyze(url, progress = () => {}, signal) {
-  await acquire((pos) => progress('queue', `Sırada bekleniyor (#${pos})`));
+  await acquire((pos) => progress('queue', `Waiting in queue (#${pos})`));
   let context;
   try {
-    if (signal?.aborted) throw new Error('İptal edildi');
-    progress('launch', 'Headless tarayıcı hazırlanıyor');
+    if (signal?.aborted) throw new Error('Cancelled');
+    progress('launch', 'Preparing headless browser');
     const browser = await getBrowser();
     context = await browser.newContext({
       viewport: VIEWPORT,
       userAgent: USER_AGENT,
       serviceWorkers: 'block',
-      locale: 'tr-TR',
+      locale: 'en-US',
       bypassCSP: false,
     });
     signal?.addEventListener('abort', () => context?.close().catch(() => {}), { once: true });
@@ -240,7 +240,7 @@ export async function analyze(url, progress = () => {}, signal) {
     const page = await context.newPage();
     page.setDefaultTimeout(NAV_TIMEOUT);
 
-    // İstek düzeyinde SSRF koruması (yönlendirmeler ve alt kaynaklar dahil).
+    // Request-level SSRF protection (including redirects and subresources).
     let blocked = 0;
     if (!ALLOW_PRIVATE) {
       await page.route('**/*', async (route) => {
@@ -249,13 +249,13 @@ export async function analyze(url, progress = () => {}, signal) {
         try {
           const { hostname, protocol } = new URL(u);
           if ((protocol === 'http:' || protocol === 'https:') && (await isHostAllowed(hostname))) return route.continue();
-        } catch { /* geçersiz */ }
+        } catch { /* invalid */ }
         blocked++;
         return route.abort('blockedbyclient');
       });
     }
 
-    // CDP ile ayrıntılı ağ kaydı.
+    // Detailed network logging via CDP.
     const cdp = await context.newCDPSession(page);
     await cdp.send('Network.enable');
     const reqs = new Map();
@@ -308,39 +308,39 @@ export async function analyze(url, progress = () => {}, signal) {
       reqs.set(e.requestId, { id: e.requestId, url: e.url, type: 'websocket', initiator: initiatorUrl(e.initiator), start: t0.mono, decoded: 0 });
     });
 
-    progress('navigate', `Sayfa yükleniyor: ${url}`);
+    progress('navigate', `Loading page: ${url}`);
     const response = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: NAV_TIMEOUT });
-    if (!response) throw new Error('Sayfadan yanıt alınamadı.');
+    if (!response) throw new Error('No response from the page.');
 
-    progress('load', `Yanıt: HTTP ${response.status()} — kaynaklar yükleniyor`);
+    progress('load', `Response: HTTP ${response.status()} — loading resources`);
     await withTimeout(page.waitForLoadState('load').catch(() => {}), 15000);
 
-    progress('settle', 'Ağ trafiğinin durulması bekleniyor');
+    progress('settle', 'Waiting for network traffic to settle');
     await withTimeout(page.waitForLoadState('networkidle').catch(() => {}), 6000);
 
-    progress('scroll', 'Tembel yüklenen (lazy) içerik için sayfa kaydırılıyor');
+    progress('scroll', 'Scrolling the page to trigger lazy-loaded content');
     await autoScroll(page).catch(() => {});
     await withTimeout(page.waitForLoadState('networkidle').catch(() => {}), 3000);
     await sleep(400);
 
-    progress('dom', 'DOM ağacı ve yerleşim ölçüleri çıkarılıyor');
+    progress('dom', 'Extracting DOM tree and layout metrics');
     const dom = await page.evaluate(extractDom, MAX_NODES);
     const perf = await page.evaluate(collectPerf).catch(() => ({}));
 
-    progress('screenshot', 'Önizleme görüntüsü alınıyor');
+    progress('screenshot', 'Capturing preview screenshot');
     const shot = await page.screenshot({ type: 'jpeg', quality: 62 }).catch(() => null);
 
-    progress('network', `${reqs.size} ağ isteği işleniyor`);
+    progress('network', `Processing ${reqs.size} network requests`);
     const finalUrl = page.url();
     const mainSite = siteOf(new URL(finalUrl).hostname);
     const brand = mainSite.split('.')[0];
-    // Sitenin kendi CDN'leri (ör. github.com → githubassets.com) birinci parti sayılır.
+    // The site's own CDNs (e.g. github.com → githubassets.com) count as first-party.
     const isFirstParty = (site) => site === mainSite || (brand.length >= 3 && site.split('.')[0].includes(brand));
 
     const resources = [];
     for (const r of reqs.values()) {
       let host = '';
-      try { host = new URL(r.url).hostname; } catch { /* yok */ }
+      try { host = new URL(r.url).hostname; } catch { /* none */ }
       if (!host) continue;
       resources.push({
         url: r.url.slice(0, 600),
@@ -364,7 +364,7 @@ export async function analyze(url, progress = () => {}, signal) {
     }
     resources.sort((a, b) => a.start - b.start);
 
-    progress('done', 'Analiz tamamlandı');
+    progress('done', 'Analysis complete');
     return {
       url,
       finalUrl,

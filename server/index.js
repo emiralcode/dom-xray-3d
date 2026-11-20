@@ -19,11 +19,11 @@ app.use((req, res, next) => {
 });
 
 app.use(express.static(path.join(ROOT, 'public'), { extensions: ['html'] }));
-// Three.js'i node_modules'tan servis et (derleme adımı gerektirmez).
+// Serve Three.js straight from node_modules (no build step needed).
 app.use('/vendor/three/build', express.static(path.join(ROOT, 'node_modules/three/build'), { maxAge: '7d' }));
 app.use('/vendor/three/addons', express.static(path.join(ROOT, 'node_modules/three/examples/jsm'), { maxAge: '7d' }));
 
-/* ------------------------------ Hız sınırlama ------------------------------ */
+/* ------------------------------- Rate limiting ------------------------------- */
 const RATE_WINDOW = 60_000;
 const RATE_MAX = Number(process.env.RATE_MAX || 12);
 const hits = new Map();
@@ -35,7 +35,7 @@ function rateLimited(ip) {
   return arr.length > RATE_MAX;
 }
 
-/* --------------------------------- Önbellek -------------------------------- */
+/* ---------------------------------- Cache ---------------------------------- */
 const CACHE_TTL = 10 * 60_000;
 const cache = new Map();
 function cacheGet(url) {
@@ -49,7 +49,7 @@ function cacheSet(url, data) {
   while (cache.size > 20) cache.delete(cache.keys().next().value);
 }
 
-/* ----------------------------- API: SSE analiz ----------------------------- */
+/* ----------------------------- API: SSE analysis ----------------------------- */
 app.get('/api/analyze', async (req, res) => {
   res.writeHead(200, {
     'Content-Type': 'text/event-stream; charset=utf-8',
@@ -65,12 +65,12 @@ app.get('/api/analyze', async (req, res) => {
 
   const t = Date.now();
   try {
-    if (rateLimited(req.ip)) throw new UrlError('Çok fazla istek. Lütfen bir dakika sonra tekrar deneyin.');
+    if (rateLimited(req.ip)) throw new UrlError('Too many requests. Please try again in a minute.');
     const url = await validateTargetUrl(req.query.url);
     const fresh = req.query.fresh === '1';
     let data = fresh ? null : cacheGet(url);
     if (data) {
-      send('progress', { step: 'cache', message: 'Önbellekten yüklendi' });
+      send('progress', { step: 'cache', message: 'Loaded from cache' });
     } else {
       data = await analyze(url, (step, message) => send('progress', { step, message, elapsed: Date.now() - t }), controller.signal);
       data.durationMs = Date.now() - t;
@@ -90,22 +90,22 @@ app.get('/api/analyze', async (req, res) => {
 
 function friendlyError(err) {
   const m = String(err?.message || err);
-  if (/ERR_NAME_NOT_RESOLVED/.test(m)) return 'Alan adı çözümlenemedi.';
-  if (/Timeout|timeout/.test(m)) return 'Sayfa zamanında yüklenmedi (zaman aşımı).';
-  if (/ERR_CONNECTION_REFUSED|ERR_CONNECTION_RESET/.test(m)) return 'Sunucuya bağlanılamadı.';
-  if (/ERR_CERT/.test(m)) return 'Sitenin SSL sertifikası geçersiz.';
-  if (/ERR_BLOCKED_BY_CLIENT/.test(m)) return 'İstek güvenlik politikası tarafından engellendi.';
-  if (/Chromium başlatılamadı/.test(m)) return m;
-  if (/closed|İptal/.test(m)) return 'Analiz iptal edildi.';
-  return `Analiz başarısız: ${m.split('\n')[0].slice(0, 200)}`;
+  if (/ERR_NAME_NOT_RESOLVED/.test(m)) return 'Could not resolve the domain name.';
+  if (/Timeout|timeout/.test(m)) return 'The page did not load in time (timeout).';
+  if (/ERR_CONNECTION_REFUSED|ERR_CONNECTION_RESET/.test(m)) return 'Could not connect to the server.';
+  if (/ERR_CERT/.test(m)) return 'The site has an invalid SSL certificate.';
+  if (/ERR_BLOCKED_BY_CLIENT/.test(m)) return 'The request was blocked by the security policy.';
+  if (/Could not launch Chromium/.test(m)) return m;
+  if (/closed|Cancelled/.test(m)) return 'Analysis cancelled.';
+  return `Analysis failed: ${m.split('\n')[0].slice(0, 200)}`;
 }
 
 app.get('/api/health', (_req, res) => res.json({ ok: true, allowPrivate: ALLOW_PRIVATE }));
 
 const server = app.listen(PORT, () => {
-  console.log(`\n  ◉ DOM X-Ray 3D çalışıyor → http://localhost:${PORT}\n`);
-  if (ALLOW_PRIVATE) console.log('  ⚠ ALLOW_PRIVATE=1: iç ağ adreslerine erişim açık.\n');
-  getBrowser().catch((e) => console.error(e.message)); // tarayıcıyı ısıt
+  console.log(`\n  ◉ DOM X-Ray 3D running → http://localhost:${PORT}\n`);
+  if (ALLOW_PRIVATE) console.log('  ⚠ ALLOW_PRIVATE=1: access to private network addresses is enabled.\n');
+  getBrowser().catch((e) => console.error(e.message)); // warm up the browser
 });
 
 const shutdown = async () => {

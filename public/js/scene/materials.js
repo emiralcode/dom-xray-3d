@@ -1,4 +1,4 @@
-// Özel shader enjeksiyonlu malzemeler: kenar parlaması, röntgen tarama halkası, fresnel kenar.
+// Materials with custom shader injections: edge glow, X-ray scan ring, fresnel rim.
 import * as THREE from 'three';
 
 export const sharedUniforms = {
@@ -42,7 +42,7 @@ varying vec2 vEdgeUv;
 varying vec3 vWorld;
 `;
 
-/** Bina (kutu) malzemesi: ekran uzayında sabit kalınlıkta parlayan kenarlar + tarama halkası. */
+/** Building (box) material: glowing edges of constant screen-space width + scan ring. */
 export function createBoxMaterial() {
   const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.62, metalness: 0.15 });
   mat.onBeforeCompile = (shader) => {
@@ -68,7 +68,7 @@ export function createBoxMaterial() {
   return mat;
 }
 
-/** Küre malzemesi: fresnel kenar ışıması (gezegenler ve uydular için). */
+/** Sphere material: fresnel rim glow (for planets and satellites). */
 export function createOrbMaterial() {
   const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4, metalness: 0.2, flatShading: true });
   mat.onBeforeCompile = (shader) => {
@@ -91,7 +91,7 @@ export function createOrbMaterial() {
   return mat;
 }
 
-/** Akan ışık darbeli bağlantı çizgileri. */
+/** Connection lines with flowing light pulses. */
 export function createFlowMaterial() {
   return new THREE.ShaderMaterial({
     uniforms: { uTime: sharedUniforms.uTime, uOpacity: { value: 1 } },
@@ -120,7 +120,7 @@ export function createFlowMaterial() {
   });
 }
 
-/** Sonsuz hissi veren, merkezden uzaklaştıkça kaybolan zemin ızgarası. */
+/** Ground grid that fades out with distance from the center, feeling endless. */
 export function createGroundMaterial() {
   return new THREE.ShaderMaterial({
     uniforms: { uCell: { value: 4 }, uFade: { value: 300 }, uScanR: sharedUniforms.uScanR, uScanI: sharedUniforms.uScanI, uScanW: sharedUniforms.uScanW },

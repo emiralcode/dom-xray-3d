@@ -1,7 +1,7 @@
-// DOM ağacını 3D kutulara yerleştiren iki düzen:
-//  - "city":   Squarified treemap. Alan = alt ağaç büyüklüğü, yükseklik = iç içe derinlik (code-city).
-//  - "layers": Gerçek sayfa yerleşimi (getBoundingClientRect). Her DOM seviyesi bir kat.
-// Çıktı: her düğüm için [cx, y0, cz, sx, sy, sz] (Float32Array, 6 * n).
+// Two layouts that place the DOM tree into 3D boxes:
+//  - "city":   Squarified treemap. Area = subtree size, height = nesting depth (code-city).
+//  - "layers": Real page layout (getBoundingClientRect). Every DOM level is one floor.
+// Output: [cx, y0, cz, sx, sy, sz] per node (Float32Array, 6 * n).
 
 export const FLOOR = 1.0;
 export const LAYER_FLOOR = 0.55;
@@ -15,7 +15,7 @@ function worst(row, sum, side) {
   return Math.max((w2 * max) / s2, s2 / (w2 * min));
 }
 
-/** Squarified treemap: weights → dikdörtgenler [x, y, w, h]. */
+/** Squarified treemap: weights → rectangles [x, y, w, h]. */
 export function squarify(weights, x, y, w, h) {
   const order = weights.map((v, i) => [v, i]).sort((a, b) => b[0] - a[0]);
   const total = order.reduce((s, [v]) => s + v, 0) || 1;
@@ -93,7 +93,7 @@ export function layoutCity(model) {
     const pad = Math.min(Math.max(Math.min(bw, bd) * 0.055, 0.04), 1.4);
     const iw = bw - pad * 2, id = bd - pad * 2;
     if (iw <= 0.01 || id <= 0.01) {
-      // Yer kalmadıysa alt ağacı üst üste yığ (gökdelen gibi yükselir).
+      // Out of room: stack the subtree vertically (it rises like a skyscraper).
       for (const k of kids) placeStacked(k, bx + bw / 2, bz + bd / 2, bw * 0.8, bd * 0.8);
       return;
     }
@@ -127,7 +127,7 @@ export function layoutLayers(model) {
   for (let i = 0; i < n; i++) {
     const node = nodes[i];
     let [x, y, w, h] = node.r;
-    // Sayfa dışına taşanları kırp
+    // Clip anything overflowing the page
     const x2 = Math.min(x + w, W), y2 = Math.min(y + h, H);
     x = Math.max(x, 0); y = Math.max(y, 0);
     w = x2 - x; h = y2 - y;

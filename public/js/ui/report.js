@@ -1,7 +1,7 @@
-// Sol panel: skor, metrikler, istatistikler, kaynak dağılımı, etiketler, teknoloji izleri.
+// Left panel: score, metrics, stats, resource breakdown, tags, technology hints.
 import { DOM_CATEGORIES, RES_TYPES, esc, fileName, fmtBytes, fmtMs, fmtNum } from '../util.js';
 
-const fmtMetric = (m) => (m.fmt === 'bytes' ? fmtBytes(m.value) : m.fmt === 'pct' ? `%${Math.round(m.value * 100)}` : fmtNum(m.value));
+const fmtMetric = (m) => (m.fmt === 'bytes' ? fmtBytes(m.value) : m.fmt === 'pct' ? `${Math.round(m.value * 100)}%` : fmtNum(m.value));
 
 function scoreRing(score, grade) {
   const R = 36;
@@ -23,7 +23,7 @@ export function renderReport(el, model, handlers) {
   const { score } = model;
   const dom = raw.dom;
   let host = '';
-  try { host = new URL(raw.finalUrl).host; } catch { /* yok */ }
+  try { host = new URL(raw.finalUrl).host; } catch { /* none */ }
 
   const types = Object.entries(model.byType).sort((a, b) => b[1].bytes - a[1].bytes);
   const totalB = model.totalBytes || 1;
@@ -39,28 +39,28 @@ export function renderReport(el, model, handlers) {
       <div>
         <h2>${esc(dom.title || host)}</h2>
         <div class="mono">${esc(raw.finalUrl)}</div>
-        <div class="small muted" style="margin-top:3px">HTTP ${raw.status} · ${fmtMs(raw.durationMs)} sürdü · ${new Date(raw.analyzedAt).toLocaleTimeString('tr-TR')}</div>
+        <div class="small muted" style="margin-top:3px">HTTP ${raw.status} · took ${fmtMs(raw.durationMs)} · ${new Date(raw.analyzedAt).toLocaleTimeString('en-US')}</div>
       </div>
     </div>
 
     <div class="score-card">
       ${scoreRing(score.score, score.grade)}
-      <div class="score-text"><h3>Şişkinlik skoru</h3><p>${esc(score.verdict)}</p></div>
+      <div class="score-text"><h3>Bloat score</h3><p>${esc(score.verdict)}</p></div>
     </div>
 
     <div class="stats">
-      <div class="stat"><b>${fmtNum(dom.totalElements)}</b><span>DOM öğe</span></div>
-      <div class="stat"><b>${dom.maxDepth}</b><span>Derinlik</span></div>
-      <div class="stat"><b>${fmtNum(model.resources.length)}</b><span>İstek</span></div>
+      <div class="stat"><b>${fmtNum(dom.totalElements)}</b><span>DOM elements</span></div>
+      <div class="stat"><b>${dom.maxDepth}</b><span>Depth</span></div>
+      <div class="stat"><b>${fmtNum(model.resources.length)}</b><span>Requests</span></div>
       <div class="stat"><b>${fmtBytes(model.totalBytes)}</b><span>Transfer</span></div>
-      <div class="stat"><b>${model.sites.length}</b><span>Alan adı</span></div>
+      <div class="stat"><b>${model.sites.length}</b><span>Domains</span></div>
       <div class="stat"><b>${fmtBytes(dom.htmlBytes)}</b><span>HTML</span></div>
     </div>
 
     <div class="section">
-      <h4>Metrikler <span>iyi ↔ kötü</span></h4>
+      <h4>Metrics <span>good ↔ bad</span></h4>
       ${score.items.map((m) => `
-        <div class="metric" title="${esc(m.hint)} (İyi: ≤ ${esc(fmtMetric({ ...m, value: m.good }))}, kötü: ≥ ${esc(fmtMetric({ ...m, value: m.bad }))})">
+        <div class="metric" title="${esc(m.hint)} (Good: ≤ ${esc(fmtMetric({ ...m, value: m.good }))}, bad: ≥ ${esc(fmtMetric({ ...m, value: m.bad }))})">
           <span class="m-label">${esc(m.label)}</span>
           <span class="m-val lv-${m.level}">${fmtMetric(m)}</span>
           <div class="m-bar"><i class="bg-${m.level}" style="width:${Math.max(4, Math.round(m.score * 100))}%"></i></div>
@@ -68,7 +68,7 @@ export function renderReport(el, model, handlers) {
     </div>
 
     <div class="section">
-      <h4>Performans <span>ilk yükleme</span></h4>
+      <h4>Performance <span>first load</span></h4>
       <div class="perf">
         <div><b class="${perfCls(p.ttfb, 800, 1800)}">${fmtMs(p.ttfb)}</b><span>TTFB</span></div>
         <div><b class="${perfCls(p.fcp, 1800, 3000)}">${fmtMs(p.fcp)}</b><span>FCP</span></div>
@@ -79,7 +79,7 @@ export function renderReport(el, model, handlers) {
     </div>
 
     <div class="section">
-      <h4>Kaynak türleri <span>${fmtBytes(model.totalBytes)}</span></h4>
+      <h4>Resource types <span>${fmtBytes(model.totalBytes)}</span></h4>
       <div class="stack">${types.map(([t, v]) => `<i style="width:${(v.bytes / totalB) * 100}%;background:${RES_TYPES[t]?.color}" title="${RES_TYPES[t]?.label}: ${fmtBytes(v.bytes)}"></i>`).join('')}</div>
       <div class="rows">
         ${types.map(([t, v]) => `
@@ -88,7 +88,7 @@ export function renderReport(el, model, handlers) {
     </div>
 
     <div class="section">
-      <h4>En ağır kaynaklar</h4>
+      <h4>Heaviest resources</h4>
       <div class="rows">
         ${heavy.map((r) => `
           <div class="row click" data-res="${r.idx}" title="${esc(r.url)}"><i style="background:${RES_TYPES[r.type]?.color}"></i><span class="r-name">${esc(fileName(r.url))}</span><span class="r-num">${esc(r.host.replace(/^www\./, '').slice(0, 18))}</span><span class="r-num strong">${fmtBytes(r.bytes)}</span></div>`).join('')}
@@ -97,15 +97,15 @@ export function renderReport(el, model, handlers) {
 
     ${third.length ? `
     <div class="section">
-      <h4>3. parti alan adları <span>%${Math.round((model.thirdPartyBytes / totalB) * 100)} bayt</span></h4>
+      <h4>Third-party domains <span>${Math.round((model.thirdPartyBytes / totalB) * 100)}% of bytes</span></h4>
       <div class="rows">
         ${third.map((s) => `
-          <div class="row click" data-site="${model.sites.indexOf(s)}"><i style="background:var(--warn)"></i><span class="r-name">${esc(s.name)}</span><span class="r-num">${s.resources.length} istek</span><span class="r-num strong">${fmtBytes(s.bytes)}</span></div>`).join('')}
+          <div class="row click" data-site="${model.sites.indexOf(s)}"><i style="background:var(--warn)"></i><span class="r-name">${esc(s.name)}</span><span class="r-num">${s.resources.length} req</span><span class="r-num strong">${fmtBytes(s.bytes)}</span></div>`).join('')}
       </div>
     </div>` : ''}
 
     <div class="section">
-      <h4>En sık etiketler <span>tıkla → vurgula</span></h4>
+      <h4>Most common tags <span>click → highlight</span></h4>
       <div class="bars">
         ${model.topTags.map(([tag, c]) => {
           const cat = model.nodes.find((n) => n.t === tag)?.cat || 'layout';
@@ -114,13 +114,13 @@ export function renderReport(el, model, handlers) {
       </div>
     </div>
 
-    ${dom.tech?.length ? `<div class="section"><h4>Teknoloji izleri</h4><div class="tech">${dom.tech.map((t) => `<span>${esc(t)}</span>`).join('')}</div></div>` : ''}
+    ${dom.tech?.length ? `<div class="section"><h4>Technology hints</h4><div class="tech">${dom.tech.map((t) => `<span>${esc(t)}</span>`).join('')}</div></div>` : ''}
 
-    ${raw.screenshot ? `<div class="section"><h4>Sayfa önizlemesi <span>${raw.viewport.width}×${raw.viewport.height}</span></h4><img class="shot" src="${raw.screenshot}" alt="Analiz edilen sayfanın ekran görüntüsü" /></div>` : ''}
+    ${raw.screenshot ? `<div class="section"><h4>Page preview <span>${raw.viewport.width}×${raw.viewport.height}</span></h4><img class="shot" src="${raw.screenshot}" alt="Screenshot of the analyzed page" /></div>` : ''}
 
-    ${dom.truncated ? `<div class="note">DOM çok büyük: ilk ${fmtNum(model.nodes.length)} öğe görselleştirildi (toplam ${fmtNum(dom.totalElements)}).</div>` : ''}
-    ${raw.blockedRequests ? `<div class="note">${raw.blockedRequests} istek güvenlik politikası gereği engellendi (iç ağ adresleri).</div>` : ''}
-    <div class="small muted" style="margin:16px 0 4px">Gövde içi: ${fmtBytes(dom.inlineScriptBytes)} satır içi JS, ${fmtBytes(dom.inlineStyleBytes)} satır içi CSS, ${dom.counts.iframes} iframe, ${dom.counts.forms} form${dom.counts.shadowHosts ? `, ${dom.counts.shadowHosts} shadow DOM öğesi` : ''}.</div>
+    ${dom.truncated ? `<div class="note">Very large DOM: the first ${fmtNum(model.nodes.length)} elements are visualized (of ${fmtNum(dom.totalElements)} total).</div>` : ''}
+    ${raw.blockedRequests ? `<div class="note">${raw.blockedRequests} requests were blocked by the security policy (private network addresses).</div>` : ''}
+    <div class="small muted" style="margin:16px 0 4px">In the document: ${fmtBytes(dom.inlineScriptBytes)} inline JS, ${fmtBytes(dom.inlineStyleBytes)} inline CSS, ${dom.counts.iframes} iframes, ${dom.counts.forms} forms${dom.counts.shadowHosts ? `, ${dom.counts.shadowHosts} shadow DOM elements` : ''}.</div>
   `;
 
   requestAnimationFrame(() => {
@@ -134,7 +134,7 @@ export function renderReport(el, model, handlers) {
   el.querySelector('.shot')?.addEventListener('click', () => {
     const box = document.createElement('div');
     box.className = 'lightbox';
-    box.innerHTML = `<img src="${raw.screenshot}" alt="Sayfa önizlemesi" />`;
+    box.innerHTML = `<img src="${raw.screenshot}" alt="Page preview" />`;
     box.addEventListener('click', () => box.remove());
     document.body.appendChild(box);
   });

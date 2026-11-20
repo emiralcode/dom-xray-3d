@@ -1,5 +1,5 @@
-// Ağ uzayı: her alan adı (site) bir gezegen, her kaynak o gezegenin yörüngesinde bir uydu.
-// Uydu boyutu = transfer boyutu (küp kök ölçek). Siteler arası çizgiler = "kim kimi yükledi" grafiği.
+// Network space: every domain (site) is a planet, every resource a satellite orbiting it.
+// Satellite size = transfer size (cube-root scale). Lines between sites = the "who loaded whom" graph.
 import * as THREE from 'three';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { createFlowMaterial, createOrbMaterial } from './materials.js';
@@ -41,7 +41,7 @@ export class Network {
     const maxSite = Math.max(1, ...sites.map((s) => s.bytes));
     const maxRes = Math.max(1, ...resources.map((r) => r.bytes));
 
-    // Gezegenler
+    // Planets
     const D = size * 1.0 + 40;
     let j = 0;
     const others = sites.length - 1;
@@ -64,7 +64,7 @@ export class Network {
       return { site: s, idx: i, pos, radius: i === coreIdx ? Math.max(r, 3.2) : r, shell, axis, speed: 0.08 + 0.35 / Math.sqrt(k + 1), domType, appear: 0 };
     });
 
-    // Uydular
+    // Satellites
     this.siteOf = new Int32Array(resources.length);
     this.sats = [];
     sites.forEach((s, si) => {
@@ -84,7 +84,7 @@ export class Network {
     this.satPos = new Float32Array(N * 3);
     this.satScale = new Float32Array(N);
 
-    // Uydu mesh'i
+    // Satellite mesh
     this.satGeo = new THREE.IcosahedronGeometry(1, 1);
     this.satTint = new Float32Array(N * 3);
     this.satGlow = new Float32Array(N);
@@ -96,7 +96,7 @@ export class Network {
     this.satMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     this.group.add(this.satMesh);
 
-    // Gezegen mesh'i
+    // Planet mesh
     const P = this.planets.length;
     this.planetGeo = new THREE.SphereGeometry(1, 36, 18);
     this.planetTint = new Float32Array(P * 3);
@@ -108,7 +108,7 @@ export class Network {
     this.planetMesh.frustumCulled = false;
     this.group.add(this.planetMesh);
 
-    // Çekirdek (doküman) için tel kafes
+    // Wireframe shell for the core (document)
     this.coreWire = new THREE.Mesh(
       new THREE.IcosahedronGeometry(this.planets[coreIdx]?.radius * 1.45 || 4, 1),
       new THREE.MeshBasicMaterial({ color: 0x7fb2ff, wireframe: true, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false }),
@@ -186,7 +186,7 @@ export class Network {
       const dom = Object.entries(l.types).sort((x, y) => y[1] - x[1])[0][0];
       addCurve(a, b, a.distanceTo(b) * 0.18, TYPE_COLORS[dom], Math.random(), 0.6 + Math.min(2.5, Math.log2(1 + l.count) * 0.5));
     }
-    // Doküman çekirdeğinden şehre inen ışın
+    // Beam from the document core down to the city
     addCurve(this.corePos, new THREE.Vector3(0, cityBounds.height, 0), 0, new THREE.Color(0x9fc2ff), 0, 1.6);
 
     const g = new THREE.BufferGeometry();
@@ -209,7 +209,7 @@ export class Network {
       const el = document.createElement('div');
       const core = p.idx === this.coreIdx;
       el.className = `lbl lbl-site${core ? ' lbl-core' : ''}`;
-      el.innerHTML = `${core ? '<b>◉</b> ' : ''}${esc(p.site.name)}<small>${p.site.resources.length} istek · ${fmtBytes(p.site.bytes)}</small>`;
+      el.innerHTML = `${core ? '<b>◉</b> ' : ''}${esc(p.site.name)}<small>${p.site.resources.length} req · ${fmtBytes(p.site.bytes)}</small>`;
       el.addEventListener('click', (e) => { e.stopPropagation(); this.onLabelClick?.(p.idx); });
       const obj = new CSS2DObject(el);
       obj.position.copy(p.pos).add(new THREE.Vector3(0, p.radius + 1.6, 0));
@@ -230,7 +230,7 @@ export class Network {
     this.chainIdx = [];
   }
 
-  /* ------------------------------ Kare ------------------------------ */
+  /* ------------------------------ Frame ------------------------------ */
 
   #update(dt, time) {
     if (!this.model) return;
@@ -251,7 +251,7 @@ export class Network {
       if (Math.abs(want - s.appear) < 0.001) s.appear = want;
       const p = this.planets[s.site];
       _v.copy(s.dir).applyQuaternion(p._q).multiplyScalar(s.dist).add(p.pos);
-      // Yeni yüklenen kaynak doküman çekirdeğinden fırlar
+      // Newly loaded resources launch out of the document core
       const e = 1 - Math.pow(1 - s.appear, 3);
       const x = core.x + (_v.x - core.x) * e, y = core.y + (_v.y - core.y) * e, z = core.z + (_v.z - core.z) * e;
       const sc = s.radius * s.appear;
@@ -280,7 +280,7 @@ export class Network {
     this.coreWire.rotation.y = time * 0.25;
     this.coreWire.rotation.x = time * 0.11;
 
-    // Başlatıcı zinciri
+    // Initiator chain
     if (this.chainIdx.length) {
       const a = this.chain.geometry.attributes.position.array;
       let c = 0;
@@ -291,7 +291,7 @@ export class Network {
     }
   }
 
-  /* ---------------------------- Vurgulama ---------------------------- */
+  /* ---------------------------- Highlighting ---------------------------- */
 
   setState(patch) {
     Object.assign(this.state, patch);
@@ -330,7 +330,7 @@ export class Network {
     this.planetGeo.attributes.aGlow.needsUpdate = true;
   }
 
-  /** Seçili kaynağın başlatıcı zincirini (initiator) çizer. */
+  /** Draws the initiator chain of the selected resource. */
   setChain(resIdx) {
     this.chainIdx = [];
     if (resIdx != null && resIdx >= 0) {
@@ -348,7 +348,7 @@ export class Network {
     this.replayT = t;
   }
 
-  /* ------------------------------ Seçim ------------------------------ */
+  /* ------------------------------ Picking ------------------------------ */
 
   pick(ray) {
     if (!this.model || !this.group.visible) return null;

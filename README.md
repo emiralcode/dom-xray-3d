@@ -1,78 +1,78 @@
-# DOM·XRAY 3D — Web Sitesi Röntgeni
+# DOM·XRAY 3D — Website X-Ray
 
-Herhangi bir web sitesinin **DOM yapısını** ve **ağ trafiğini** headless Chromium ile analiz edip
-gezilebilir bir 3D dünyaya dönüştürür:
+Analyzes any website's **DOM structure** and **network traffic** with headless Chromium and turns
+them into an explorable 3D world:
 
-- **DOM şehri**: her HTML öğesi bir bina. Büyük `div` blokları geniş platformlara ve gökdelenlere dönüşür,
-  derin iç içe sarmalayıcı zincirleri uzun ince kuleler olarak göze batar.
-- **Ağ uzayı**: her alan adı bir gezegen, yüklenen her kaynak (script, görsel, CSS, font, API isteği)
-  o gezegenin yörüngesinde dönen bir uydudur. Uydu boyutu = indirilen bayt. Ağır scriptler devasa uydulara dönüşür.
-- **Bağımlılık grafiği**: akan ışık çizgileri “hangi alan adı hangisinden kaynak yükledi” (CDP initiator) zincirini gösterir.
+- **DOM city**: every HTML element is a building. Big `div` blocks become wide platforms and skyscrapers,
+  and deeply nested wrapper chains stand out as tall, thin towers.
+- **Network space**: every domain is a planet and every loaded resource (script, image, CSS, font, API request)
+  is a satellite orbiting it. Satellite size = bytes downloaded, so heavy scripts become huge satellites.
+- **Dependency graph**: flowing light lines show which domain loaded resources from which (CDP initiator chain).
 
-## Hızlı başlangıç
+## Quick start
 
 ```bash
 npm install
-npm run setup     # Playwright Chromium'u indirir (bir kez)
+npm run setup     # downloads Playwright's Chromium (once)
 npm start         # http://localhost:3000
 ```
 
-Node.js 18+ gerekir. Chromium indirilemezse sistemdeki Chrome veya Edge otomatik olarak kullanılır.
+Requires Node.js 18+. If Chromium cannot be downloaded, the system's Chrome or Edge is used automatically.
 
-Doğrudan bir siteyle açmak için: `http://localhost:3000/?url=github.com`
+To open a site directly: `http://localhost:3000/?url=github.com`
 
-## Özellikler
+## Features
 
-| Alan | Ayrıntı |
+| Area | Details |
 | --- | --- |
-| İki 3D düzen | **Şehir** (squarified treemap: alan = alt öğe sayısı, yükseklik = derinlik) ve **Sayfa düzeni** (gerçek `getBoundingClientRect` konumları, her DOM seviyesi bir kat). Aralarında animasyonlu geçiş. |
-| Şişkinlik skoru | DOM boyutu, derinlik, toplam transfer, JS ağırlığı, istek sayısı, 3. parti oranı ve “div çorbası” üzerinden A–F notu. |
-| Denetçi | Bir binaya / uyduya / gezegene tıklayınca: CSS yolu, ata zinciri, çocuklar, boyut, transfer, sıkıştırma, durum kodu, protokol, initiator zinciri, “bu kaynağın yükledikleri”. |
-| Seçici araması | `div`, `.card`, `#app`, `a.btn`, `img, video` gibi seçicilerle eşleşen binaları vurgular. |
-| Zaman çizelgesi | Ağ trafiğini yeniden oynatır: kaynaklar yüklendikleri anda doküman çekirdeğinden fırlayıp yörüngelerine oturur. Arka planda mini şelale (waterfall) grafiği. |
-| Filtreler | DOM kategorileri ve kaynak türleri lejanttan açılıp kapatılır; gizli (`display:none`) öğeler ayrıca gizlenebilir. |
-| Performans | Binlerce öğe tek bir `InstancedMesh` ile çizilir; seçim, Three.js raycaster yerine özel ışın–AABB / ışın–küre testleriyle yapılır. Kenar parlaması ve röntgen tarama halkası shader'a enjekte edilmiştir. |
-| Dışa/içe aktar | Analiz JSON olarak indirilebilir; JSON dosyasını pencereye sürükleyip bırakınca sunucusuz yeniden görüntülenir. |
+| Two 3D layouts | **City** (squarified treemap: area = number of descendants, height = depth) and **Page layout** (real `getBoundingClientRect` positions, every DOM level is one floor). Animated transitions between them. |
+| Bloat score | A–F grade based on DOM size, depth, total transfer, JS weight, request count, third-party share and “div soup”. |
+| Inspector | Click a building / satellite / planet for its CSS path, ancestor chain, children, size, transfer, compression, status code, protocol, initiator chain and “resources it loaded”. |
+| Selector search | Highlights buildings matching selectors such as `div`, `.card`, `#app`, `a.btn`, `img, video`. |
+| Timeline | Replays network traffic: resources launch out of the document core at the moment they load and settle into orbit. A mini waterfall chart sits behind the slider. |
+| Filters | Toggle DOM categories and resource types from the legend; hidden (`display:none`) elements can be hidden separately. |
+| Performance | Thousands of elements are drawn with a single `InstancedMesh`; picking uses custom ray–AABB / ray–sphere tests instead of the Three.js raycaster. Edge glow and the X-ray scan ring are injected into the shaders. |
+| Export / import | Download an analysis as JSON; drag and drop a JSON file onto the window to view it again without the server. |
 
-### Kısayollar
+### Shortcuts
 
-`Tık` seç · `Çift tık`/`F` odaklan · `L` düzen değiştir · `/` arama · `S` tarama · `P` trafiği oynat · `U` üst öğe · `R` kamerayı sıfırla · `Esc` temizle
+`Click` select · `Double-click`/`F` focus · `L` switch layout · `/` search · `S` scan · `P` replay traffic · `U` parent element · `R` reset camera · `Esc` clear
 
-## Mimari
+## Architecture
 
 ```
 server/
-  index.js      Express + SSE (/api/analyze): ilerleme adımlarını canlı yayınlar, 10 dk önbellek, hız sınırı
-  analyzer.js   Playwright + Chrome DevTools Protocol: ağ kaydı (transfer, initiator, zamanlama),
-                lazy-load için otomatik kaydırma, DOM ağacı + yerleşim çıkarımı, Web Vitals, ekran görüntüsü
-  security.js   SSRF koruması: localhost / özel IP / bulut metadata adreslerini hem giriş URL'sinde
-                hem de sayfanın yaptığı her istekte engeller
+  index.js      Express + SSE (/api/analyze): streams progress steps live, 10 min cache, rate limiting
+  analyzer.js   Playwright + Chrome DevTools Protocol: network log (transfer, initiator, timing),
+                auto-scroll for lazy loading, DOM tree + layout extraction, Web Vitals, screenshot
+  security.js   SSRF protection: blocks localhost / private IP / cloud metadata addresses both in the
+                input URL and in every request the page makes
 public/
-  js/model.js         ham veri → ağaç istatistikleri, skor, seçici derleyici
-  js/scene/engine.js  renderer, kamera, OrbitControls, UnrealBloom, CSS2D etiketler, kamera uçuşu
-  js/scene/layouts.js treemap şehir ve gerçek sayfa düzeni algoritmaları
-  js/scene/city.js    DOM binaları (InstancedMesh), animasyonlar, vurgulama, seçim
-  js/scene/network.js gezegenler, uydular, yörüngeler, akış çizgileri, initiator zinciri
-  js/scene/materials.js özel shader enjeksiyonları (kenar ışıması, fresnel, tarama, ızgara)
-  js/ui/*             rapor ve denetçi panelleri
+  js/model.js           raw data → tree statistics, score, selector compiler
+  js/scene/engine.js    renderer, camera, OrbitControls, UnrealBloom, CSS2D labels, camera flights
+  js/scene/layouts.js   treemap city and real page layout algorithms
+  js/scene/city.js      DOM buildings (InstancedMesh), animations, highlighting, picking
+  js/scene/network.js   planets, satellites, orbits, flow lines, initiator chain
+  js/scene/materials.js custom shader injections (edge glow, fresnel, scan, grid)
+  js/ui/*               report and inspector panels
 ```
 
-Derleme adımı yoktur: Three.js doğrudan `node_modules`'tan ES modülü olarak servis edilir.
+There is no build step: Three.js is served as ES modules straight from `node_modules`.
 
-## Yapılandırma (ortam değişkenleri)
+## Configuration (environment variables)
 
-| Değişken | Varsayılan | Açıklama |
+| Variable | Default | Description |
 | --- | --- | --- |
-| `PORT` | `3000` | Sunucu portu |
-| `MAX_CONCURRENT` | `2` | Aynı anda çalışan analiz sayısı (fazlası sıraya girer) |
-| `MAX_NODES` | `12000` | Görselleştirilecek en fazla DOM öğesi |
-| `NAV_TIMEOUT` | `30000` | Sayfa yükleme zaman aşımı (ms) |
-| `RATE_MAX` | `12` | IP başına dakikada en fazla analiz |
-| `ALLOW_PRIVATE` | — | `1` yapılırsa localhost / iç ağ adresleri analiz edilebilir (yalnızca yerel geliştirme için) |
+| `PORT` | `3000` | Server port |
+| `MAX_CONCURRENT` | `2` | Number of analyses running at once (extra requests are queued) |
+| `MAX_NODES` | `12000` | Maximum number of DOM elements to visualize |
+| `NAV_TIMEOUT` | `30000` | Page load timeout (ms) |
+| `RATE_MAX` | `12` | Maximum analyses per IP per minute |
+| `ALLOW_PRIVATE` | — | Set to `1` to allow analyzing localhost / private network addresses (local development only) |
 
-## Notlar
+## Notes
 
-- “3. parti” ayrımı kayıtlı alan adına göre yapılır; sitenin kendi CDN'leri (ör. `github.com` → `githubassets.com`)
-  ad benzerliğinden birinci parti sayılır. Farklı adlı kendi CDN'ler (ör. `wikipedia.org` → `wikimedia.org`) 3. parti görünür.
-- Transfer boyutları CDP `encodedDataLength` değeridir (sıkıştırılmış, başlıklar dahil).
-- `?debug` parametresi WebGL tamponunu korur (ekran görüntüsü / otomasyon testleri için).
+- “Third party” is decided by registrable domain; a site's own CDNs (e.g. `github.com` → `githubassets.com`)
+  count as first-party based on name similarity. Own CDNs with different names (e.g. `wikipedia.org` → `wikimedia.org`) appear as third-party.
+- Transfer sizes are CDP `encodedDataLength` values (compressed, headers included).
+- The `?debug` parameter preserves the WebGL buffer (for screenshots / automated tests).
